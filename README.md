@@ -38,14 +38,13 @@ Follow these steps to run the project locally.
 
 1.  Clone the repository:
     ```bash
-    git clone [https://github.com/your-username/missing-person-detector.git](https://github.com/your-username/missing-person-detector.git)
+    git clone [https://github.com/Arjun-ys/missing-person-detector.git](https://github.com/Arjun-ys/missing-person-detector.git)
     cd missing-person-detector
     ```
 2.  Install the required Python packages:
     ```bash
     pip install -r requirements.txt
     ```
-    *(Note: You'll need to create a `requirements.txt` file for this to work. See instructions below.)*
 
 ### ### How to Run
 
