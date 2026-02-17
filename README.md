@@ -2,7 +2,6 @@
 
 An AI-driven application to identify missing persons in real-time using facial recognition. This project uses Python, OpenCV, Flask, and MongoDB to create a complete full-stack detection system.
 
-![Project Demo GIF](link_to_your_demo_gif_here)
 
 ---
 
