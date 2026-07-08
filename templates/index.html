@@ -3,28 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Missing Person Reporter</title>
+    <title>Missing Person Detector</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>Report a Missing Person</h1>
-        <p>Upload a clear photo of the person's face.</p>
-        
-        <form id="addPersonForm">
-            <div class="form-group">
-                <label for="name">Person's Name:</label>
-                <input type="text" id="name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="image">Photo:</label>
-                <input type="file" id="image" name="image" accept="image/png, image/jpeg" required>
-            </div>
-            <button type="submit">Add Person</button>
-        </form>
+    <header class="app-header">
+        <div>
+            <p class="eyebrow">AI Face Recognition System</p>
+            <h1>Missing Person Detector</h1>
+            <p class="subtitle">Register missing-person profiles, manage case details, and match live webcam faces against MongoDB records.</p>
+        </div>
+        <div class="health-pill" id="recordCount">Loading records...</div>
+    </header>
 
-        <div id="statusMessage"></div>
-    </div>
+    <main class="app-shell">
+        <section class="panel registration-panel">
+            <div class="section-title">
+                <h2>Register Person</h2>
+                <p>Add a clear face photo and practical case details.</p>
+            </div>
+
+            <form id="personForm">
+                <input type="hidden" id="personId">
+
+                <div class="field-grid">
+                    <label>
+                        Name
+                        <input type="text" id="name" required placeholder="Full name">
+                    </label>
+                    <label>
+                        Age
+                        <input type="number" id="age" min="0" placeholder="Age">
+                    </label>
+                </div>
+
+                <label>
+                    Last Seen Location
+                    <input type="text" id="last_seen_location" placeholder="City, area, or landmark">
+                </label>
+
+                <label>
+                    Last Seen Date
+                    <input type="date" id="last_seen_date">
+                </label>
+
+                <label>
+                    Contact Info
+                    <input type="text" id="contact_info" placeholder="Phone or email">
+                </label>
+
+                <label>
+                    Status
+                    <select id="status">
+                        <option value="missing">Missing</option>
+                        <option value="investigating">Investigating</option>
+                        <option value="found">Found</option>
+                    </select>
+                </label>
+
+                <label>
+                    Notes
+                    <textarea id="notes" rows="4" placeholder="Clothing, identifying details, case notes"></textarea>
+                </label>
+
+                <label>
+                    Face Photo
+                    <input type="file" id="image" accept="image/png, image/jpeg">
+                </label>
+
+                <img id="imagePreview" class="image-preview" alt="Selected face preview">
+
+                <div class="button-row">
+                    <button type="submit" id="saveButton">Save Person</button>
+                    <button type="button" class="secondary" id="cancelEditButton" hidden>Cancel Edit</button>
+                </div>
+            </form>
+
+            <div id="formMessage" class="message" role="status"></div>
+        </section>
+
+        <section class="panel records-panel">
+            <div class="section-title">
+                <h2>Saved Records</h2>
+                <p>Manage MongoDB-backed missing-person profiles.</p>
+            </div>
+            <div id="personsList" class="persons-list"></div>
+        </section>
+
+        <section class="panel detection-panel">
+            <div class="section-title">
+                <h2>Live Webcam Match</h2>
+                <p>Scan faces from your browser camera against active missing-person records.</p>
+            </div>
+
+            <div class="video-wrap">
+                <video id="webcam" autoplay muted playsinline></video>
+                <canvas id="captureCanvas" hidden></canvas>
+            </div>
+
+            <div class="button-row">
+                <button type="button" id="startCameraButton">Start Camera</button>
+                <button type="button" class="secondary" id="stopCameraButton" disabled>Stop</button>
+            </div>
+
+            <div id="matchResult" class="match-result idle">
+                Camera is idle.
+            </div>
+        </section>
+    </main>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

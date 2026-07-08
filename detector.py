@@ -1,106 +1,117 @@
+import os
+
 import cv2
-import numpy as np
-import requests # New import for making API requests
 import face_recognition
-# --- New Function to Fetch Data from API ---
+import numpy as np
+import requests
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:5000")
+MATCH_THRESHOLD = float(os.getenv("MATCH_THRESHOLD", "0.6"))
+
+
 def fetch_known_faces_from_api():
-    """
-    Fetches known face encodings and names from our Flask API.
-    """
-    # The URL of our Flask API endpoint
-    API_URL = "http://127.0.0.1:5000/get_known_faces"
-    
-    known_face_encodings = []
-    known_face_names = []
-
-    print("Fetching known faces from the API...")
     try:
-        response = requests.get(API_URL)
-        # Raise an exception if the request was unsuccessful
-        response.raise_for_status() 
-        
-        data = response.json()
-        
-        # The encodings from JSON are lists, so we convert them back to numpy arrays
-        known_face_encodings = [np.array(encoding) for encoding in data['known_face_encodings']]
-        known_face_names = data['known_face_names']
-        
-        print(f"Successfully loaded {len(known_face_names)} known faces.")
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data from API: {e}")
-        # Return empty lists if the API is down or there's an error
+        response = requests.get(f"{API_BASE_URL}/api/persons", timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"Could not fetch people from API: {exc}")
         return [], []
-        
-    return known_face_encodings, known_face_names
 
-# --- Video Detection Logic (This part is mostly unchanged) ---
+    people = response.json().get("persons", [])
+    names = []
+    encodings = []
+
+    # The public list endpoint intentionally omits encodings, so use the
+    # legacy endpoint for this optional local detector mode.
+    try:
+        response = requests.get(f"{API_BASE_URL}/get_known_faces", timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"Could not fetch face encodings from API: {exc}")
+        return [], []
+
+    data = response.json()
+    for name, encoding in zip(
+        data.get("known_face_names", []),
+        data.get("known_face_encodings", []),
+    ):
+        names.append(name)
+        encodings.append(np.array(encoding))
+
+    print(f"Loaded {len(names)} active records from {API_BASE_URL}.")
+    return encodings, names
+
+
 def run_detection(known_face_encodings, known_face_names):
-    """
-    Captures video and performs real-time face recognition.
-    """
-    # Get a reference to webcam #0 (the default one)
     video_capture = cv2.VideoCapture(0)
 
     if not video_capture.isOpened():
-        print("Error: Could not open video stream.")
+        print("Could not open webcam.")
         return
 
-    print("\nStarting video stream and detection... Press 'q' to quit.")
-    
+    print("Starting desktop detector. Press q to quit.")
+
     while True:
-        ret, frame = video_capture.read()
-        if not ret:
+        ok, frame = video_capture.read()
+        if not ok:
             break
 
-        # For performance, we can process every other frame
-        # Or resize the frame to be smaller
         small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
         rgb_small_frame = np.ascontiguousarray(small_frame[:, :, ::-1])
 
-        # Find all faces in the current frame
         face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        face_encodings = face_recognition.face_encodings(
+            rgb_small_frame,
+            face_locations,
+        )
 
-        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        for (top, right, bottom, left), face_encoding in zip(
+            face_locations,
+            face_encodings,
+        ):
             name = "Unknown"
-
-            face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            if len(face_distances) > 0:
-                best_match_index = np.argmin(face_distances)
-                if matches[best_match_index]:
+            if known_face_encodings:
+                distances = face_recognition.face_distance(
+                    known_face_encodings,
+                    face_encoding,
+                )
+                best_match_index = int(np.argmin(distances))
+                if distances[best_match_index] <= MATCH_THRESHOLD:
                     name = known_face_names[best_match_index]
-                    print(f"!!! MATCH FOUND: {name} !!!")
+                    print(f"Match found: {name}")
 
-            # Scale back up face locations since the frame we detected in was scaled
             top *= 4
             right *= 4
             bottom *= 4
             left *= 4
 
-            # Draw a box and label
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-            font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+            cv2.rectangle(frame, (left, top), (right, bottom), (18, 105, 224), 2)
+            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (18, 105, 224), cv2.FILLED)
+            cv2.putText(
+                frame,
+                name,
+                (left + 6, bottom - 8),
+                cv2.FONT_HERSHEY_DUPLEX,
+                0.8,
+                (255, 255, 255),
+                1,
+            )
 
-        cv2.imshow('Missing Person Detector', frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow("Missing Person Detector", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     video_capture.release()
     cv2.destroyAllWindows()
-    print("Video stream stopped.")
 
 
-# --- Main Execution ---
-if __name__ == '__main__':
-    # Fetch the data from our API instead of a local folder
-    known_encodings, known_names = fetch_known_faces_from_api()
-
-    if known_names:
-        run_detection(known_encodings, known_names)
+if __name__ == "__main__":
+    encodings, names = fetch_known_faces_from_api()
+    if not names:
+        print("No active missing-person encodings found. Add records in the web app first.")
     else:
-        print("Could not load any known faces from the API. Please add a person via the web interface and ensure the Flask server is running.")
+        run_detection(encodings, names)

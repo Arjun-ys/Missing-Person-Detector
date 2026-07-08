@@ -1,60 +1,87 @@
 # Missing Person Detector
 
-An AI-driven application to identify missing persons in real-time using facial recognition. This project uses Python, OpenCV, Flask, and MongoDB to create a complete full-stack detection system.
+A full-stack AI application that registers missing-person profiles, stores facial encodings in MongoDB, and matches live webcam frames against active records using OpenCV, dlib, and face_recognition.
 
+## Features
 
----
+- Browser-based missing-person registration with image preview and case metadata.
+- MongoDB-backed profile management for viewing, editing, deleting, and updating case status.
+- Flask REST API for person records and real-time face matching.
+- Live webcam matching in the web app through `navigator.mediaDevices.getUserMedia`.
+- Optional OpenCV desktop detector in `detector.py` for two-terminal demos.
 
-## ## Features
+## Tech Stack
 
-* **Real-Time Detection:** Uses a live webcam feed to perform facial recognition.
-* **Web Interface:** A user-friendly web page to add and manage missing persons' data.
-* **RESTful API:** A Flask backend provides API endpoints for data storage and retrieval.
-* **Database Integration:** Uses MongoDB to persistently store face encodings and names.
+- Python, Flask, REST API
+- OpenCV, dlib, face_recognition
+- MongoDB Atlas or local MongoDB
+- HTML, CSS, JavaScript
 
----
+## Setup
 
-## ## Tech Stack
+1. Create and activate a virtual environment.
 
-* **Backend:** Python, Flask
-* **AI/Computer Vision:** OpenCV, face_recognition, dlib
-* **Database:** MongoDB
-* **Frontend:** HTML, CSS, JavaScript
-
----
-
-## ## Setup and Usage
-
-Follow these steps to run the project locally.
-
-### ### Prerequisites
-
-* Python 3.8+
-* MongoDB Atlas account
-* C++ Build Tools & CMake (for Windows `dlib` installation)
-
-### ### Installation
-
-1.  Clone the repository:
     ```bash
-    git clone [https://github.com/Arjun-ys/missing-person-detector.git](https://github.com/Arjun-ys/missing-person-detector.git)
-    cd missing-person-detector
+    python -m venv .venv
+    .venv\Scripts\activate
     ```
-2.  Install the required Python packages:
+
+2. Install dependencies.
+
     ```bash
     pip install -r requirements.txt
     ```
 
-### ### How to Run
+    On Windows, `dlib` may require CMake and C++ Build Tools. If regular installation fails, install a Python-version-compatible `dlib` wheel first, then rerun the requirements command.
 
-1.  **Start the Backend Server:**
+3. Configure MongoDB.
+
     ```bash
-    python app.py
+    copy .env.example .env
     ```
-2.  **Add a Person:**
-    Open a web browser and go to `http://127.0.0.1:5000`. Use the form to add a person's name and photo.
-3.  **Run the Detector:**
-    Open a second terminal and run:
-    ```bash
-    python detector.py
-    ```
+
+    For MongoDB Atlas, edit `.env` and set `MONGO_URI` to your Atlas connection string. For local MongoDB, the default URI works if MongoDB is running locally.
+
+## Run The Web App
+
+```bash
+python app.py
+```
+
+Open `http://127.0.0.1:5000` in a browser.
+
+Recommended demo flow:
+
+1. Register a missing-person profile with a clear face image.
+2. Confirm the record appears in Saved Records.
+3. Start the webcam in Live Webcam Match.
+4. Show matched, unknown, and no-face states from the browser.
+
+## Optional Desktop Detector
+
+Start the Flask app first, then run:
+
+```bash
+python detector.py
+```
+
+The detector uses `API_BASE_URL` and `MATCH_THRESHOLD` from `.env`. Press `q` to close the OpenCV window.
+
+## API Summary
+
+- `POST /api/persons` - create a missing-person record with profile fields and image.
+- `GET /api/persons` - list saved records without raw face encodings.
+- `GET /api/persons/<id>` - fetch one record.
+- `PUT /api/persons/<id>` - update profile metadata, status, and optionally face image.
+- `DELETE /api/persons/<id>` - delete one record.
+- `POST /api/match` - match a base64 webcam frame against active missing-person records.
+
+Legacy endpoints `/add_person` and `/get_known_faces` remain available for older scripts.
+
+## Tests
+
+```bash
+python -m pytest
+```
+
+The tests use mocked face-recognition behavior and an in-memory collection, so they do not require a live MongoDB server or webcam.

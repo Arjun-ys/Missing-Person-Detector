@@ -9,3 +9,9 @@ __pycache__/
 venv/
 ENV/
 env/
+
+# Local configuration
+.env
+
+# Local MongoDB data for manual testing
+.mongo-data/
