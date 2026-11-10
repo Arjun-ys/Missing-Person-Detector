@@ -15,9 +15,3 @@ env/
 
 # Local MongoDB data for manual testing
 .mongo-data/
-
-# Personal face photos (keep local only)
-known_people/*.jpg
-known_people/*.jpeg
-known_people/*.png
-known_people/*.webp
